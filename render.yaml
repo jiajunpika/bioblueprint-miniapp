@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: pika-miniapp-demo
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: PIKA_BASE_URL
+        sync: false  # Set in Render dashboard
+      - key: PIKA_API_KEY
+        sync: false  # Set in Render dashboard (secret)
