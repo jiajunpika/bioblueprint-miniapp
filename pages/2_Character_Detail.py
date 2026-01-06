@@ -2,11 +2,17 @@
 
 import json
 import streamlit as st
-from utils.client import get_client, is_connected, handle_api_error
+from config import DEFAULT_CHARACTER_ID, KNOWN_CHARACTERS, DEFAULT_BASE_URL, DEFAULT_API_KEY
+from utils.client import get_client, is_connected, handle_api_error, init_client
 
 st.set_page_config(page_title="Character Detail", page_icon="📋", layout="wide")
 
 st.title("📋 Character Detail")
+
+# Auto-connect if not connected but env vars are set
+if not is_connected() and DEFAULT_API_KEY:
+    with st.spinner("Auto-connecting to API..."):
+        init_client(DEFAULT_BASE_URL, DEFAULT_API_KEY)
 
 if not is_connected():
     st.warning("Please connect to API first (go to main page)")
@@ -14,15 +20,30 @@ if not is_connected():
 
 client = get_client()
 
-# Character ID input
-character_id = st.text_input(
-    "Character ID",
-    value=st.session_state.get("selected_character_id", ""),
-    placeholder="Enter character UUID",
-)
+# Character selection
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    # Quick select from known characters
+    character_options = ["-- Custom ID --"] + [f"{c['name']} ({c['id'][:8]}...)" for c in KNOWN_CHARACTERS]
+    selected_option = st.selectbox("Quick Select", character_options)
+
+with col2:
+    # Manual input
+    if selected_option == "-- Custom ID --":
+        character_id = st.text_input(
+            "Character ID",
+            value=st.session_state.get("selected_character_id", DEFAULT_CHARACTER_ID),
+            placeholder="Enter character UUID",
+        )
+    else:
+        # Find the selected character
+        idx = character_options.index(selected_option) - 1
+        character_id = KNOWN_CHARACTERS[idx]["id"]
+        st.text_input("Character ID", value=character_id, disabled=True)
 
 if not character_id:
-    st.info("Enter a character ID above to view details")
+    st.info("Select a character or enter a character ID to view details")
     st.stop()
 
 # Fetch character data

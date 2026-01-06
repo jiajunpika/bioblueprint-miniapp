@@ -10,6 +10,18 @@ st.set_page_config(
     layout="wide",
 )
 
+# Auto-connect on startup if environment variables are set
+if not is_connected() and DEFAULT_API_KEY:
+    with st.spinner("Auto-connecting to API..."):
+        success, message = init_client(DEFAULT_BASE_URL, DEFAULT_API_KEY)
+        if success:
+            # Redirect to Character Detail page after auto-connect
+            st.switch_page("pages/2_Character_Detail.py")
+
+# If connected, redirect to Character Detail
+if is_connected():
+    st.switch_page("pages/2_Character_Detail.py")
+
 st.title("Pika MiniApp SDK Demo")
 
 # Sidebar - API Configuration
@@ -39,6 +51,7 @@ with st.sidebar:
                 success, message = init_client(base_url, api_key)
                 if success:
                     st.success(message)
+                    st.switch_page("pages/2_Character_Detail.py")
                 else:
                     st.error(message)
 
@@ -52,33 +65,27 @@ with st.sidebar:
     st.divider()
     st.caption("Navigate using the sidebar menu above")
 
-# Main content
-if not is_connected():
-    st.info("Please configure your API credentials in the sidebar and click 'Connect' to get started.")
+# Main content - only shown if not connected
+st.info("Please configure your API credentials in the sidebar and click 'Connect' to get started.")
 
-    st.markdown("""
-    ### Quick Start
+st.markdown("""
+### Quick Start
 
-    1. Enter your **Base URL** (staging server is pre-filled)
-    2. Enter your **API Key** (starts with `ma_`)
-    3. Click **Connect**
-    4. Use the sidebar menu to navigate between pages
+1. Enter your **Base URL** (staging server is pre-filled)
+2. Enter your **API Key** (starts with `ma_`)
+3. Click **Connect**
+4. Use the sidebar menu to navigate between pages
 
-    ### Available Pages
+### Available Pages
 
-    - **Characters**: Browse and search characters
-    - **Character Detail**: View profile, album, and export JSON
-    - **Assets**: Browse creation assets (outfits, etc.)
-    - **Blueprint Editor**: Edit character AI personality data
-    """)
-else:
-    st.success("Connected! Use the sidebar menu to navigate.")
+- **Characters**: Browse and search characters
+- **Character Detail**: View profile, album, and export JSON
+- **Assets**: Browse creation assets (outfits, etc.)
+- **Blueprint Editor**: Edit character AI personality data
 
-    st.markdown("""
-    ### What you can do:
+### Environment Variables
 
-    - **1_Characters**: Browse character list, enter character ID to query
-    - **2_Character_Detail**: View detailed profile, album, and export as JSON
-    - **3_Assets**: Browse creation assets with type filters
-    - **4_Blueprint_Editor**: Edit blueprint state fields
-    """)
+Set these environment variables to auto-connect:
+- `PIKA_BASE_URL`: API base URL
+- `PIKA_API_KEY`: Your API key (starts with `ma_`)
+""")
