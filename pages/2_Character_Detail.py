@@ -321,6 +321,45 @@ def render_attr(label: str, value: str) -> str:
     '''
 
 
+def format_value(value) -> str:
+    """Format a value for HTML display."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        if not value:
+            return ""
+        if isinstance(value[0], dict):
+            # List of dicts - format as items
+            items = []
+            for item in value:
+                parts = [f"{k}: {v}" for k, v in item.items() if v]
+                items.append(" | ".join(parts))
+            return "<br>".join(f"• {item}" for item in items)
+        return ", ".join(str(v) for v in value)
+    if isinstance(value, dict):
+        parts = []
+        for k, v in value.items():
+            if v:
+                parts.append(f"<strong>{k}:</strong> {format_value(v)}")
+        return "<br>".join(parts)
+    return str(value)
+
+
+def render_data_card(title: str, icon: str, color_class: str, data: dict) -> str:
+    """Render a card with dict data formatted as attributes."""
+    if not data:
+        return ""
+    attrs = []
+    for key, value in data.items():
+        if value:
+            formatted = format_value(value)
+            if formatted:
+                attrs.append(render_attr(key, formatted))
+    if not attrs:
+        return ""
+    return render_card(title, icon, color_class, "".join(attrs))
+
+
 # ==================== HERO SECTION ====================
 profile = character.profile
 identity = profile.identity_card if profile else None
@@ -408,42 +447,48 @@ with tabs[0]:
         if character.profile.avatar:
             st.image(character.profile.avatar, use_container_width=True)
 
+        # Social Stats Card
+        stats_content = f'''
+        <div style="display: flex; gap: 16px; margin-top: 16px;">
+            <div class="quick-stat">
+                <div class="quick-stat-value">{character.profile.followers_count or 0}</div>
+                <div class="quick-stat-label">Followers</div>
+            </div>
+            <div class="quick-stat">
+                <div class="quick-stat-value">{character.profile.following_count or 0}</div>
+                <div class="quick-stat-label">Following</div>
+            </div>
+            <div class="quick-stat">
+                <div class="quick-stat-value">{character.profile.posts_count or 0}</div>
+                <div class="quick-stat-label">Posts</div>
+            </div>
+        </div>
+        '''
+        st.markdown(stats_content, unsafe_allow_html=True)
+
     with col2:
-        st.markdown(f"### {character.profile.profile_name}")
-        st.markdown(f"**@{character.profile.username}**")
-
-        if character.profile.identity_card.bio:
-            st.markdown(f"_{character.profile.identity_card.bio}_")
-
-        st.divider()
-
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            st.metric("Followers", character.profile.followers_count)
-        with col_b:
-            st.metric("Following", character.profile.following_count)
-        with col_c:
-            st.metric("Posts", character.profile.posts_count)
-
-        if character.profile.voice_url:
-            st.audio(character.profile.voice_url)
-
-        # Handles
+        # Handles Card
         if character.profile.handles:
-            st.markdown("#### Social Media")
             handles = character.profile.handles
+            handles_content = ""
             for platform, handle in handles.items():
                 if handle:
-                    st.markdown(f"**{platform}:** {handle}")
+                    handles_content += render_attr(platform.capitalize(), handle)
+            st.markdown(render_card("Social Media", "🔗", "expression", handles_content), unsafe_allow_html=True)
+
+        # Voice
+        if character.profile.voice_url:
+            st.markdown(render_card("Voice Sample", "🎤", "aesthetic", ""), unsafe_allow_html=True)
+            st.audio(character.profile.voice_url)
 
 # Tab 2: Identity Card
 with tabs[1]:
     card = character.profile.identity_card
-
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### 📝 Basic Info")
+        # Basic Info Card
+        basic_content = ""
         info_items = [
             ("Gender", card.gender),
             ("Age", card.age),
@@ -455,10 +500,12 @@ with tabs[1]:
         ]
         for label, value in info_items:
             if value:
-                st.markdown(f"**{label}:** {value}")
+                basic_content += render_attr(label, str(value))
+        st.markdown(render_card("Basic Info", "📝", "personality", basic_content), unsafe_allow_html=True)
 
     with col2:
-        st.markdown("#### 👁️ Appearance")
+        # Appearance Card
+        appearance_content = ""
         appearance_items = [
             ("Phenotype", card.phenotype),
             ("Hair", card.hair),
@@ -469,64 +516,134 @@ with tabs[1]:
         ]
         for label, value in appearance_items:
             if value:
-                st.markdown(f"**{label}:** {value}")
+                appearance_content += render_attr(label, str(value))
+        st.markdown(render_card("Appearance", "👁️", "aesthetic", appearance_content), unsafe_allow_html=True)
 
+    # Interests Card
     if card.interests:
-        st.markdown("#### 🎯 Interests")
-        st.markdown(" ".join([f"`{i}`" for i in card.interests]))
+        interests_pills = render_pills(card.interests, highlight_first=3)
+        st.markdown(render_card("Interests", "🎯", "simulation", interests_pills), unsafe_allow_html=True)
 
+    # Tags Card
     if card.profile_tags:
-        st.markdown("#### 🏷️ Tags")
-        st.markdown(" ".join([f"`{t}`" for t in card.profile_tags]))
+        tags_pills = render_pills(card.profile_tags, highlight_first=3)
+        st.markdown(render_card("Profile Tags", "🏷️", "career", tags_pills), unsafe_allow_html=True)
 
 # Tab 3: Core Personality
 with tabs[2]:
     if character.blueprint and character.blueprint.core_personality:
         cp = character.blueprint.core_personality
 
-        st.markdown("### 🧠 Core Personality")
-
-        # MBTI & Overview
-        if cp.get("mbti"):
-            st.markdown(f"**MBTI:** `{cp.get('mbti')}`")
-        if cp.get("overview"):
-            st.info(cp.get("overview"))
+        # MBTI & Overview header
+        if cp.get("mbti") or cp.get("overview"):
+            overview_content = ""
+            if cp.get("mbti"):
+                overview_content += f'<span class="value-pill highlight">{cp.get("mbti")}</span>'
+            if cp.get("overview"):
+                overview_content += f'<div style="margin-top: 12px; color: #aaa; line-height: 1.6;">{cp.get("overview")}</div>'
+            st.markdown(render_card("Overview", "🧠", "personality", overview_content), unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            render_json_expander(cp.get("attributes"), "🎭 Attributes (性格特征)")
-            render_json_expander(cp.get("values"), "💎 Values (价值观)")
-            render_json_expander(cp.get("knowledge"), "📚 Knowledge (知识领域)")
-            render_json_expander(cp.get("opinions"), "💭 Opinions (观点)")
-            render_json_expander(cp.get("petPeeves"), "😤 Pet Peeves (烦恼)")
-            render_json_expander(cp.get("humor"), "😄 Humor (幽默风格)")
+            # Values
+            if cp.get("values"):
+                values_data = cp.get("values")
+                if isinstance(values_data, dict):
+                    content = ""
+                    for k, v in values_data.items():
+                        if v:
+                            content += render_attr(k, format_value(v))
+                    if content:
+                        st.markdown(render_card("Values", "💎", "expression", content), unsafe_allow_html=True)
+                elif isinstance(values_data, list):
+                    st.markdown(render_card("Values", "💎", "expression", render_pills(values_data, highlight_first=3)), unsafe_allow_html=True)
+
+            # Attributes
+            if cp.get("attributes"):
+                st.markdown(render_data_card("Attributes", "🎭", "personality", cp.get("attributes")), unsafe_allow_html=True)
+
+            # Knowledge
+            if cp.get("knowledge"):
+                st.markdown(render_data_card("Knowledge", "📚", "simulation", cp.get("knowledge")), unsafe_allow_html=True)
+
+            # Opinions
+            if cp.get("opinions"):
+                st.markdown(render_data_card("Opinions", "💭", "aesthetic", cp.get("opinions")), unsafe_allow_html=True)
+
+            # Pet Peeves
+            if cp.get("petPeeves"):
+                peeves = cp.get("petPeeves")
+                if isinstance(peeves, list):
+                    st.markdown(render_card("Pet Peeves", "😤", "personality", render_pills(peeves)), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Pet Peeves", "😤", "personality", peeves), unsafe_allow_html=True)
+
+            # Humor
+            if cp.get("humor"):
+                st.markdown(render_data_card("Humor", "😄", "expression", cp.get("humor")), unsafe_allow_html=True)
 
         with col2:
-            render_json_expander(cp.get("attachment"), "💕 Attachment (依恋风格)")
-            render_json_expander(cp.get("memories"), "🧠 Memories (记忆)")
-            render_json_expander(cp.get("fearsAndDesires"), "😰 Fears & Desires (恐惧与渴望)")
-            render_json_expander(cp.get("passionsAndHobbies"), "🎨 Passions & Hobbies (热情与爱好)")
-            render_json_expander(cp.get("taste"), "🍽️ Taste (口味偏好)")
-            render_json_expander(cp.get("habits"), "📅 Habits (习惯)")
-            render_json_expander(cp.get("rituals"), "🌅 Rituals (日常仪式)")
+            # Attachment
+            if cp.get("attachment"):
+                st.markdown(render_data_card("Attachment", "💕", "personality", cp.get("attachment")), unsafe_allow_html=True)
 
-        # Career Engine (embedded in corePersonality)
+            # Memories
+            if cp.get("memories"):
+                st.markdown(render_data_card("Memories", "🧠", "simulation", cp.get("memories")), unsafe_allow_html=True)
+
+            # Fears & Desires
+            if cp.get("fearsAndDesires"):
+                st.markdown(render_data_card("Fears & Desires", "😰", "aesthetic", cp.get("fearsAndDesires")), unsafe_allow_html=True)
+
+            # Passions & Hobbies
+            if cp.get("passionsAndHobbies"):
+                ph = cp.get("passionsAndHobbies")
+                if isinstance(ph, dict):
+                    hobbies = ph.get("hobbies", [])
+                    interests = ph.get("interests", [])
+                    content = ""
+                    if hobbies:
+                        content += f"<div style='margin-bottom: 8px;'><strong>Hobbies:</strong></div>{render_pills(hobbies, highlight_first=2)}"
+                    if interests:
+                        content += f"<div style='margin: 12px 0 8px;'><strong>Interests:</strong></div>{render_pills(interests)}"
+                    if content:
+                        st.markdown(render_card("Passions & Hobbies", "🎨", "expression", content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Passions & Hobbies", "🎨", "expression", ph), unsafe_allow_html=True)
+
+            # Taste
+            if cp.get("taste"):
+                st.markdown(render_data_card("Taste", "🍽️", "aesthetic", cp.get("taste")), unsafe_allow_html=True)
+
+            # Habits
+            if cp.get("habits"):
+                habits = cp.get("habits")
+                if isinstance(habits, list):
+                    st.markdown(render_card("Habits", "📅", "simulation", render_pills(habits)), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Habits", "📅", "simulation", habits), unsafe_allow_html=True)
+
+            # Rituals
+            if cp.get("rituals"):
+                rituals = cp.get("rituals")
+                if isinstance(rituals, list):
+                    st.markdown(render_card("Rituals", "🌅", "expression", render_pills(rituals)), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Rituals", "🌅", "expression", rituals), unsafe_allow_html=True)
+
+        # Career Engine (embedded in corePersonality) - show preview
         if cp.get("careerEngine"):
-            st.divider()
-            st.markdown("### 💼 Career Engine (嵌入)")
+            st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
             ce = cp.get("careerEngine")
-            col1, col2 = st.columns(2)
-            with col1:
-                render_json_expander(ce.get("identity"), "🏢 Identity (职业身份)")
-                render_json_expander(ce.get("workStyle"), "⚙️ Work Style (工作风格)")
-                render_json_expander(ce.get("psychology"), "🧠 Psychology (职业心理)")
-                render_json_expander(ce.get("capabilities"), "💪 Capabilities (能力)")
-            with col2:
-                render_json_expander(ce.get("presentation"), "📊 Presentation (职业展示)")
-                render_json_expander(ce.get("professionalOpinions"), "💬 Professional Opinions (职业观点)")
-                render_json_expander(ce.get("achievements"), "🏆 Achievements (成就)")
-                render_json_expander(ce.get("technicalExpertise"), "🔧 Technical Expertise (技术专长)")
+            identity = ce.get("identity", {})
+            title = identity.get("title", "")
+            niche = ", ".join(identity.get("industryNiche", [])[:3]) if identity.get("industryNiche") else ""
+            career_preview = f"<strong>{title}</strong>" if title else ""
+            if niche:
+                career_preview += f"<br><span style='color: #888;'>{niche}</span>"
+            career_preview += "<br><span style='color: #666; font-size: 12px;'>See Career Engine tab for details →</span>"
+            st.markdown(render_card("Career Engine", "💼", "career", career_preview), unsafe_allow_html=True)
     else:
         st.info("No core personality data available")
 
@@ -537,48 +654,68 @@ with tabs[3]:
         ce = cp.get("careerEngine", {})
 
         if ce:
-            st.markdown("### 💼 Career Engine")
-
-            # Identity
+            # Identity card - hero style
             if ce.get("identity"):
-                st.markdown("#### 🏢 职业身份")
-                identity = ce.get("identity")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(f"**Title:** {identity.get('title', 'N/A')}")
-                    st.markdown(f"**Current Status:** {identity.get('currentStatus', 'N/A')}")
-                    st.markdown(f"**Dream Role:** {identity.get('dreamRole', 'N/A')}")
-                with col2:
-                    if identity.get("industryNiche"):
-                        st.markdown("**Industry Niche:**")
-                        for niche in identity.get("industryNiche", []):
-                            st.markdown(f"- {niche}")
+                identity_data = ce.get("identity")
+                title = identity_data.get("title", "")
+                status = identity_data.get("currentStatus", "")
+                dream = identity_data.get("dreamRole", "")
+                niche = identity_data.get("industryNiche", [])
 
-            # Work Style
-            render_json_expander(ce.get("workStyle"), "⚙️ Work Style (工作风格)", expanded=True)
+                id_content = ""
+                if title:
+                    id_content += f"<div style='font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 8px;'>{title}</div>"
+                if status:
+                    id_content += render_attr("Status", status)
+                if dream:
+                    id_content += render_attr("Dream Role", dream)
+                if niche:
+                    id_content += f"<div style='margin-top: 12px;'>{render_pills(niche, highlight_first=2)}</div>"
+                st.markdown(render_card("Professional Identity", "🏢", "career", id_content), unsafe_allow_html=True)
 
-            # Capabilities
-            if ce.get("capabilities"):
-                st.markdown("#### 💪 Capabilities")
-                caps = ce.get("capabilities")
-                col1, col2 = st.columns(2)
-                with col1:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Work Style
+                if ce.get("workStyle"):
+                    st.markdown(render_data_card("Work Style", "⚙️", "simulation", ce.get("workStyle")), unsafe_allow_html=True)
+
+                # Capabilities
+                if ce.get("capabilities"):
+                    caps = ce.get("capabilities")
+                    caps_content = ""
                     if caps.get("hardSkills"):
-                        st.markdown("**Hard Skills:**")
-                        st.markdown(" ".join([f"`{s}`" for s in caps.get("hardSkills", [])]))
-                with col2:
+                        caps_content += f"<div style='margin-bottom: 8px;'><strong>Hard Skills</strong></div>{render_pills(caps.get('hardSkills'), highlight_first=3)}"
                     if caps.get("softSkills"):
-                        st.markdown("**Soft Skills:**")
-                        st.markdown(" ".join([f"`{s}`" for s in caps.get("softSkills", [])]))
+                        caps_content += f"<div style='margin: 12px 0 8px;'><strong>Soft Skills</strong></div>{render_pills(caps.get('softSkills'))}"
+                    if caps_content:
+                        st.markdown(render_card("Capabilities", "💪", "expression", caps_content), unsafe_allow_html=True)
 
-            # Technical Expertise
-            render_json_expander(ce.get("technicalExpertise"), "🔧 Technical Expertise (技术专长)")
+                # Technical Expertise
+                if ce.get("technicalExpertise"):
+                    st.markdown(render_data_card("Technical Expertise", "🔧", "aesthetic", ce.get("technicalExpertise")), unsafe_allow_html=True)
 
-            # Achievements
-            render_json_expander(ce.get("achievements"), "🏆 Achievements (成就)")
+            with col2:
+                # Achievements
+                if ce.get("achievements"):
+                    achievements = ce.get("achievements")
+                    if isinstance(achievements, list):
+                        ach_content = "<br>".join(f"• {a}" for a in achievements)
+                        st.markdown(render_card("Achievements", "🏆", "career", ach_content), unsafe_allow_html=True)
+                    else:
+                        st.markdown(render_data_card("Achievements", "🏆", "career", achievements), unsafe_allow_html=True)
 
-            # Psychology
-            render_json_expander(ce.get("psychology"), "🧠 Psychology (职业心理)")
+                # Psychology
+                if ce.get("psychology"):
+                    st.markdown(render_data_card("Psychology", "🧠", "personality", ce.get("psychology")), unsafe_allow_html=True)
+
+                # Presentation
+                if ce.get("presentation"):
+                    st.markdown(render_data_card("Presentation", "📊", "simulation", ce.get("presentation")), unsafe_allow_html=True)
+
+                # Professional Opinions
+                if ce.get("professionalOpinions"):
+                    st.markdown(render_data_card("Professional Opinions", "💬", "aesthetic", ce.get("professionalOpinions")), unsafe_allow_html=True)
         else:
             st.info("No career engine data available")
     else:
@@ -589,18 +726,37 @@ with tabs[4]:
     if character.blueprint and character.blueprint.expression_engine:
         ee = character.blueprint.expression_engine
 
-        st.markdown("### 💬 Expression Engine")
-
         col1, col2 = st.columns(2)
 
         with col1:
-            render_json_expander(ee.get("conversationStyle"), "🗣️ Conversation Style (对话风格)", expanded=True)
-            render_json_expander(ee.get("voiceAttributes"), "🔊 Voice Attributes (语音特征)")
-            render_json_expander(ee.get("voiceStyle"), "🎙️ Voice Style (声音风格)")
+            # Conversation Style
+            if ee.get("conversationStyle"):
+                st.markdown(render_data_card("Conversation Style", "🗣️", "expression", ee.get("conversationStyle")), unsafe_allow_html=True)
+
+            # Voice Attributes
+            if ee.get("voiceAttributes"):
+                st.markdown(render_data_card("Voice Attributes", "🔊", "aesthetic", ee.get("voiceAttributes")), unsafe_allow_html=True)
+
+            # Voice Style
+            if ee.get("voiceStyle"):
+                st.markdown(render_data_card("Voice Style", "🎙️", "personality", ee.get("voiceStyle")), unsafe_allow_html=True)
 
         with col2:
-            render_json_expander(ee.get("typingStyle"), "⌨️ Typing Style (打字风格)", expanded=True)
-            render_json_expander(ee.get("interaction"), "🤝 Interaction (互动方式)")
+            # Typing Style
+            if ee.get("typingStyle"):
+                st.markdown(render_data_card("Typing Style", "⌨️", "simulation", ee.get("typingStyle")), unsafe_allow_html=True)
+
+            # Interaction
+            if ee.get("interaction"):
+                st.markdown(render_data_card("Interaction", "🤝", "career", ee.get("interaction")), unsafe_allow_html=True)
+
+            # Languages (if exists)
+            if ee.get("languages"):
+                langs = ee.get("languages")
+                if isinstance(langs, list):
+                    st.markdown(render_card("Languages", "🌐", "expression", render_pills(langs, highlight_first=1)), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Languages", "🌐", "expression", langs), unsafe_allow_html=True)
     else:
         st.info("No expression engine data available")
 
@@ -609,21 +765,65 @@ with tabs[5]:
     if character.blueprint and character.blueprint.aesthetic_engine:
         ae = character.blueprint.aesthetic_engine
 
-        st.markdown("### 🎨 Aesthetic Engine")
-
         col1, col2 = st.columns(2)
 
         with col1:
-            render_json_expander(ae.get("essence"), "✨ Essence (本质)", expanded=True)
-            render_json_expander(ae.get("appearance"), "👤 Appearance (外观)")
-            render_json_expander(ae.get("fashionDNA"), "👔 Fashion DNA (时尚DNA)")
-            render_json_expander(ae.get("colorPalette"), "🎨 Color Palette (配色)")
+            # Essence
+            if ae.get("essence"):
+                essence = ae.get("essence")
+                if isinstance(essence, dict):
+                    vibe = essence.get("vibe", "")
+                    aesthetic = essence.get("aesthetic", [])
+                    content = ""
+                    if vibe:
+                        content += f"<div style='font-size: 16px; color: #fff; margin-bottom: 12px;'>{vibe}</div>"
+                    if aesthetic:
+                        content += render_pills(aesthetic if isinstance(aesthetic, list) else [aesthetic], highlight_first=2)
+                    for k, v in essence.items():
+                        if k not in ["vibe", "aesthetic"] and v:
+                            content += render_attr(k, format_value(v))
+                    if content:
+                        st.markdown(render_card("Essence", "✨", "aesthetic", content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Essence", "✨", "aesthetic", essence), unsafe_allow_html=True)
+
+            # Appearance
+            if ae.get("appearance"):
+                st.markdown(render_data_card("Appearance", "👤", "personality", ae.get("appearance")), unsafe_allow_html=True)
+
+            # Fashion DNA
+            if ae.get("fashionDNA"):
+                st.markdown(render_data_card("Fashion DNA", "👔", "career", ae.get("fashionDNA")), unsafe_allow_html=True)
+
+            # Color Palette
+            if ae.get("colorPalette"):
+                palette = ae.get("colorPalette")
+                if isinstance(palette, list):
+                    st.markdown(render_card("Color Palette", "🎨", "expression", render_pills(palette)), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Color Palette", "🎨", "expression", palette), unsafe_allow_html=True)
 
         with col2:
-            render_json_expander(ae.get("visualLanguage"), "📸 Visual Language (视觉语言)")
-            render_json_expander(ae.get("signatureShots"), "📷 Signature Shots (标志性照片)")
-            render_json_expander(ae.get("energy"), "⚡ Energy (能量表达)")
-            render_json_expander(ae.get("world"), "🌍 World (世界设定)", expanded=True)
+            # Visual Language
+            if ae.get("visualLanguage"):
+                st.markdown(render_data_card("Visual Language", "📸", "simulation", ae.get("visualLanguage")), unsafe_allow_html=True)
+
+            # Signature Shots
+            if ae.get("signatureShots"):
+                shots = ae.get("signatureShots")
+                if isinstance(shots, list):
+                    shots_content = "<br>".join(f"• {s}" for s in shots)
+                    st.markdown(render_card("Signature Shots", "📷", "aesthetic", shots_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Signature Shots", "📷", "aesthetic", shots), unsafe_allow_html=True)
+
+            # Energy
+            if ae.get("energy"):
+                st.markdown(render_data_card("Energy", "⚡", "personality", ae.get("energy")), unsafe_allow_html=True)
+
+            # World
+            if ae.get("world"):
+                st.markdown(render_data_card("World", "🌍", "career", ae.get("world")), unsafe_allow_html=True)
     else:
         st.info("No aesthetic engine data available")
 
@@ -632,57 +832,100 @@ with tabs[6]:
     if character.blueprint and character.blueprint.simulation:
         sim = character.blueprint.simulation
 
-        st.markdown("### 🏠 Simulation")
-
-        # Circadian
+        # Circadian card - special layout
         if sim.get("circadian"):
-            st.markdown("#### ⏰ Circadian (生物钟)")
             circ = sim.get("circadian")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Chronotype", circ.get("chronotype", "N/A"))
-            with col2:
-                st.metric("Wake Time", circ.get("wakeTime", "N/A"))
-            with col3:
-                st.metric("Sleep Time", circ.get("sleepTime", "N/A"))
+            circ_content = ""
+            if circ.get("chronotype"):
+                circ_content += f"<div style='font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 12px;'>{circ.get('chronotype')}</div>"
+            times = []
+            if circ.get("wakeTime"):
+                times.append(f"🌅 Wake: {circ.get('wakeTime')}")
+            if circ.get("sleepTime"):
+                times.append(f"🌙 Sleep: {circ.get('sleepTime')}")
+            if times:
+                circ_content += f"<div style='color: #aaa; margin-bottom: 8px;'>{' | '.join(times)}</div>"
             if circ.get("peakHours"):
-                st.markdown(f"**Peak Hours:** {', '.join(circ.get('peakHours', []))}")
+                circ_content += f"<div style='margin-top: 8px;'>{render_pills(circ.get('peakHours'))}</div>"
+            st.markdown(render_card("Circadian Rhythm", "⏰", "simulation", circ_content), unsafe_allow_html=True)
 
         # Household
-        render_json_expander(sim.get("household"), "🏠 Household (家庭)", expanded=True)
+        if sim.get("household"):
+            st.markdown(render_data_card("Household", "🏠", "career", sim.get("household")), unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            render_json_expander(sim.get("weekday"), "📅 Weekday (工作日)")
-            render_json_expander(sim.get("weekend"), "🌴 Weekend (周末)")
-            render_json_expander(sim.get("lifestyleRhythm"), "🎵 Lifestyle Rhythm (生活节奏)")
-            render_json_expander(sim.get("consumption"), "🛒 Consumption (消费习惯)")
-            render_json_expander(sim.get("foodPreferences"), "🍽️ Food Preferences (食物偏好)")
+            # Weekday
+            if sim.get("weekday"):
+                st.markdown(render_data_card("Weekday", "📅", "personality", sim.get("weekday")), unsafe_allow_html=True)
+
+            # Weekend
+            if sim.get("weekend"):
+                st.markdown(render_data_card("Weekend", "🌴", "aesthetic", sim.get("weekend")), unsafe_allow_html=True)
+
+            # Lifestyle Rhythm
+            if sim.get("lifestyleRhythm"):
+                st.markdown(render_data_card("Lifestyle Rhythm", "🎵", "expression", sim.get("lifestyleRhythm")), unsafe_allow_html=True)
+
+            # Consumption
+            if sim.get("consumption"):
+                st.markdown(render_data_card("Consumption", "🛒", "career", sim.get("consumption")), unsafe_allow_html=True)
+
+            # Food Preferences
+            if sim.get("foodPreferences"):
+                st.markdown(render_data_card("Food Preferences", "🍽️", "aesthetic", sim.get("foodPreferences")), unsafe_allow_html=True)
+
+            # Video Games
+            if sim.get("videoGames"):
+                st.markdown(render_data_card("Video Games", "🎮", "expression", sim.get("videoGames")), unsafe_allow_html=True)
 
         with col2:
-            render_json_expander(sim.get("activities"), "🎯 Activities (活动)")
-            render_json_expander(sim.get("socialScene"), "👥 Social Scene (社交场景)")
-            render_json_expander(sim.get("locations"), "📍 Locations (常去地点)")
-            render_json_expander(sim.get("relationships"), "💑 Relationships (人际关系)")
-            render_json_expander(sim.get("socialTendencies"), "🤝 Social Tendencies (社交倾向)")
+            # Activities
+            if sim.get("activities"):
+                st.markdown(render_data_card("Activities", "🎯", "simulation", sim.get("activities")), unsafe_allow_html=True)
 
-        # Hobbies
+            # Social Scene
+            if sim.get("socialScene"):
+                st.markdown(render_data_card("Social Scene", "👥", "personality", sim.get("socialScene")), unsafe_allow_html=True)
+
+            # Locations
+            if sim.get("locations"):
+                locs = sim.get("locations")
+                if isinstance(locs, list):
+                    locs_content = "<br>".join(f"📍 {loc}" for loc in locs)
+                    st.markdown(render_card("Locations", "📍", "career", locs_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Locations", "📍", "career", locs), unsafe_allow_html=True)
+
+            # Relationships
+            if sim.get("relationships"):
+                st.markdown(render_data_card("Relationships", "💑", "personality", sim.get("relationships")), unsafe_allow_html=True)
+
+            # Social Tendencies
+            if sim.get("socialTendencies"):
+                st.markdown(render_data_card("Social Tendencies", "🤝", "expression", sim.get("socialTendencies")), unsafe_allow_html=True)
+
+            # Current State
+            if sim.get("currentState"):
+                st.markdown(render_data_card("Current State", "📍", "simulation", sim.get("currentState")), unsafe_allow_html=True)
+
+        # Hobbies - full width
         if sim.get("hobbies"):
-            st.markdown("#### 🎮 Hobbies")
-            st.markdown(" ".join([f"`{h}`" for h in sim.get("hobbies", [])]))
-
-        # Video Games
-        render_json_expander(sim.get("videoGames"), "🎮 Video Games (游戏偏好)")
+            st.markdown(render_card("Hobbies", "🎮", "aesthetic", render_pills(sim.get("hobbies"), highlight_first=3)), unsafe_allow_html=True)
 
         # Recurring Events
-        render_json_expander(sim.get("recurringEvents"), "📆 Recurring Events (定期活动)")
+        if sim.get("recurringEvents"):
+            events = sim.get("recurringEvents")
+            if isinstance(events, list):
+                events_content = "<br>".join(f"📆 {e}" for e in events)
+                st.markdown(render_card("Recurring Events", "📆", "simulation", events_content), unsafe_allow_html=True)
+            else:
+                st.markdown(render_data_card("Recurring Events", "📆", "simulation", events), unsafe_allow_html=True)
 
         # Travel Plans
-        render_json_expander(sim.get("travelPlans"), "✈️ Travel Plans (旅行计划)")
-
-        # Current State
-        render_json_expander(sim.get("currentState"), "📍 Current State (当前状态)")
+        if sim.get("travelPlans"):
+            st.markdown(render_data_card("Travel Plans", "✈️", "career", sim.get("travelPlans")), unsafe_allow_html=True)
     else:
         st.info("No simulation data available")
 
@@ -691,44 +934,67 @@ with tabs[7]:
     if character.blueprint and character.blueprint.backstory:
         bs = character.blueprint.backstory
 
-        st.markdown("### 📖 Backstory")
-
-        # Simple string fields
+        # Origin card - hero style
         if bs.get("origin"):
-            st.markdown("#### 🌍 Origin (出身)")
-            st.info(bs.get("origin"))
-
-        if bs.get("family"):
-            st.markdown("#### 👨‍👩‍👧 Family (家庭)")
-            st.info(bs.get("family"))
-
-        if bs.get("pets"):
-            st.markdown("#### 🐱 Pets (宠物)")
-            st.info(bs.get("pets"))
-
-        # Education
-        render_json_expander(bs.get("education"), "🎓 Education (教育经历)", expanded=True)
-
-        # Life Events
-        render_json_expander(bs.get("lifeEvents"), "📅 Life Events (人生事件)")
-
-        # Formative Relationships
-        render_json_expander(bs.get("formativeRelationships"), "💕 Formative Relationships (重要关系)")
+            origin_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('origin')}</div>"
+            st.markdown(render_card("Origin", "🌍", "simulation", origin_content), unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
+
         with col1:
+            # Family
+            if bs.get("family"):
+                family_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('family')}</div>"
+                st.markdown(render_card("Family", "👨‍👩‍👧", "personality", family_content), unsafe_allow_html=True)
+
+            # Education
+            if bs.get("education"):
+                edu = bs.get("education")
+                if isinstance(edu, dict):
+                    st.markdown(render_data_card("Education", "🎓", "career", edu), unsafe_allow_html=True)
+                elif isinstance(edu, list):
+                    edu_content = "<br>".join(f"🎓 {e}" for e in edu)
+                    st.markdown(render_card("Education", "🎓", "career", edu_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_card("Education", "🎓", "career", f"<div style='color: #ddd;'>{edu}</div>"), unsafe_allow_html=True)
+
+            # Life Events
+            if bs.get("lifeEvents"):
+                events = bs.get("lifeEvents")
+                if isinstance(events, list):
+                    events_content = "<br>".join(f"📅 {format_value(e)}" for e in events)
+                    st.markdown(render_card("Life Events", "📅", "aesthetic", events_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Life Events", "📅", "aesthetic", events), unsafe_allow_html=True)
+
             # Core Wounds
             if bs.get("coreWounds"):
-                st.markdown("#### 💔 Core Wounds (核心创伤)")
-                for wound in bs.get("coreWounds", []):
-                    st.markdown(f"- {wound}")
+                wounds = bs.get("coreWounds")
+                if isinstance(wounds, list):
+                    wounds_content = "<br>".join(f"💔 {w}" for w in wounds)
+                    st.markdown(render_card("Core Wounds", "💔", "personality", wounds_content), unsafe_allow_html=True)
 
         with col2:
+            # Pets
+            if bs.get("pets"):
+                pets_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('pets')}</div>"
+                st.markdown(render_card("Pets", "🐱", "expression", pets_content), unsafe_allow_html=True)
+
+            # Formative Relationships
+            if bs.get("formativeRelationships"):
+                rels = bs.get("formativeRelationships")
+                if isinstance(rels, list):
+                    rels_content = "<br>".join(f"💕 {format_value(r)}" for r in rels)
+                    st.markdown(render_card("Formative Relationships", "💕", "simulation", rels_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Formative Relationships", "💕", "simulation", rels), unsafe_allow_html=True)
+
             # Core Joys
             if bs.get("coreJoys"):
-                st.markdown("#### 💖 Core Joys (核心快乐)")
-                for joy in bs.get("coreJoys", []):
-                    st.markdown(f"- {joy}")
+                joys = bs.get("coreJoys")
+                if isinstance(joys, list):
+                    joys_content = "<br>".join(f"💖 {j}" for j in joys)
+                    st.markdown(render_card("Core Joys", "💖", "expression", joys_content), unsafe_allow_html=True)
     else:
         st.info("No backstory data available")
 
@@ -737,26 +1003,38 @@ with tabs[8]:
     if character.blueprint and character.blueprint.goal:
         goal = character.blueprint.goal
 
-        st.markdown("### 🎯 Goals")
+        col1, col2 = st.columns(2)
 
-        # Long Term Aspirations
-        if goal.get("longTermAspirations"):
-            st.markdown("#### 🌟 Long Term Aspirations (长期愿景)")
-            for aspiration in goal.get("longTermAspirations", []):
-                st.markdown(f"- {aspiration}")
-
-        # Short Term Queue
-        if goal.get("shortTermQueue"):
-            st.markdown("#### 📋 Short Term Queue (短期目标)")
-            for item in goal.get("shortTermQueue", []):
-                if isinstance(item, dict):
-                    priority = item.get("priority", "N/A")
-                    task = item.get("task", "N/A")
-                    status = item.get("status", "pending")
-                    status_icon = "✅" if status == "completed" else "⏳" if status == "in_progress" else "📝"
-                    st.markdown(f"{status_icon} **[P{priority}]** {task}")
+        with col1:
+            # Long Term Aspirations
+            if goal.get("longTermAspirations"):
+                aspirations = goal.get("longTermAspirations")
+                if isinstance(aspirations, list):
+                    asp_content = "<br>".join(f"🌟 {a}" for a in aspirations)
+                    st.markdown(render_card("Long Term Aspirations", "🌟", "career", asp_content), unsafe_allow_html=True)
                 else:
-                    st.markdown(f"- {item}")
+                    st.markdown(render_data_card("Long Term Aspirations", "🌟", "career", aspirations), unsafe_allow_html=True)
+
+        with col2:
+            # Short Term Queue
+            if goal.get("shortTermQueue"):
+                queue = goal.get("shortTermQueue")
+                if isinstance(queue, list):
+                    queue_items = []
+                    for item in queue:
+                        if isinstance(item, dict):
+                            priority = item.get("priority", "")
+                            task = item.get("task", "")
+                            status = item.get("status", "pending")
+                            status_icon = "✅" if status == "completed" else "⏳" if status == "in_progress" else "📝"
+                            p_badge = f"<span class='value-pill highlight'>P{priority}</span>" if priority else ""
+                            queue_items.append(f"{status_icon} {p_badge} {task}")
+                        else:
+                            queue_items.append(f"📋 {item}")
+                    queue_content = "<br>".join(queue_items)
+                    st.markdown(render_card("Short Term Queue", "📋", "simulation", queue_content), unsafe_allow_html=True)
+                else:
+                    st.markdown(render_data_card("Short Term Queue", "📋", "simulation", queue), unsafe_allow_html=True)
     else:
         st.info("No goal data available")
 
