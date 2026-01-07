@@ -9,6 +9,9 @@ st.set_page_config(page_title="Character Detail", page_icon="📋", layout="wide
 
 st.title("📋 Character Detail")
 
+# Get UUID from URL query params (e.g., ?uuid=xxx)
+url_uuid = st.query_params.get("uuid", None)
+
 # Auto-connect if not connected but env vars are set
 if not is_connected() and DEFAULT_API_KEY:
     with st.spinner("Auto-connecting to API..."):
@@ -20,20 +23,32 @@ if not is_connected():
 
 client = get_client()
 
+# Determine initial character ID (URL param takes priority)
+initial_character_id = url_uuid or st.session_state.get("selected_character_id", DEFAULT_CHARACTER_ID)
+
 # Character selection
 col1, col2 = st.columns([2, 1])
 
 with col1:
     # Quick select from known characters
     character_options = ["-- Custom ID --"] + [f"{c['name']} ({c['id'][:8]}...)" for c in KNOWN_CHARACTERS]
-    selected_option = st.selectbox("Quick Select", character_options)
+
+    # Find if URL uuid matches a known character
+    default_index = 0
+    if url_uuid:
+        for i, c in enumerate(KNOWN_CHARACTERS):
+            if c["id"] == url_uuid:
+                default_index = i + 1
+                break
+
+    selected_option = st.selectbox("Quick Select", character_options, index=default_index)
 
 with col2:
     # Manual input
     if selected_option == "-- Custom ID --":
         character_id = st.text_input(
             "Character ID",
-            value=st.session_state.get("selected_character_id", DEFAULT_CHARACTER_ID),
+            value=initial_character_id,
             placeholder="Enter character UUID",
         )
     else:
