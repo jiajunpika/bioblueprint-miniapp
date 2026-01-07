@@ -508,20 +508,21 @@ with tabs[9]:
 with tabs[10]:
     st.markdown("#### 📤 Export as JSON")
 
+    all_export_options = [
+        "Full Character",
+        "Profile Only",
+        "Identity Card Only",
+        "Core Personality",
+        "Expression Engine",
+        "Aesthetic Engine",
+        "Simulation",
+        "Backstory",
+        "Goals",
+    ]
     export_options = st.multiselect(
         "Select data to export",
-        [
-            "Full Character",
-            "Profile Only",
-            "Identity Card Only",
-            "Core Personality",
-            "Expression Engine",
-            "Aesthetic Engine",
-            "Simulation",
-            "Backstory",
-            "Goals",
-        ],
-        default=["Full Character"],
+        all_export_options,
+        default=all_export_options,
     )
 
     if st.button("Generate JSON", type="primary"):
