@@ -8,10 +8,15 @@ from utils.client import get_client, is_connected, handle_api_error, init_client
 st.set_page_config(page_title="Character Detail", page_icon="📋", layout="wide")
 
 # Custom CSS for Profile View style - Light theme based on index.html
+# Load Google Fonts
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+""", unsafe_allow_html=True)
+
+# CSS Styles
+st.markdown("""
 <style>
 /* CSS Variables */
 :root {
@@ -334,27 +339,25 @@ def render_pills(items: list, highlight_first: int = 0) -> str:
 
 def render_card(title: str, icon: str, color_class: str, content: str) -> str:
     """Render a profile card with header and body."""
-    return f'''
-    <div class="profile-card">
-        <div class="profile-card-header">
-            <div class="profile-card-icon {color_class}">{icon}</div>
-            {title}
-        </div>
-        <div class="profile-card-body">
-            {content}
-        </div>
-    </div>
-    '''
+    return (
+        f'<div class="profile-card">'
+        f'<div class="profile-card-header">'
+        f'<div class="profile-card-icon {color_class}">{icon}</div>'
+        f'{title}'
+        f'</div>'
+        f'<div class="profile-card-body">{content}</div>'
+        f'</div>'
+    )
 
 
 def render_attr(label: str, value: str) -> str:
     """Render an attribute item."""
-    return f'''
-    <div class="attr-item">
-        <div class="attr-label">{label}</div>
-        <div class="attr-value">{value}</div>
-    </div>
-    '''
+    return (
+        f'<div class="attr-item">'
+        f'<div class="attr-label">{label}</div>'
+        f'<div class="attr-value">{value}</div>'
+        f'</div>'
+    )
 
 
 def format_value(value) -> str:

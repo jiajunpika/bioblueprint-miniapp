@@ -1,6 +1,10 @@
 """Demo configuration."""
 
 import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # API Configuration
 DEFAULT_BASE_URL = os.getenv("PIKA_BASE_URL", "https://mnbvcxzlkjh9o4p.pika.art")
