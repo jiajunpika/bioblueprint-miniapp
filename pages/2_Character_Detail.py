@@ -7,13 +7,37 @@ from utils.client import get_client, is_connected, handle_api_error, init_client
 
 st.set_page_config(page_title="Character Detail", page_icon="📋", layout="wide")
 
-# Custom CSS for Profile View style
+# Custom CSS for Profile View style - Light theme based on index.html
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* CSS Variables */
+:root {
+    --bg-primary: #fafafa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f5f5f5;
+    --border-primary: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+    --accent: #000000;
+    /* Module colors */
+    --color-personality: #3b82f6;
+    --color-career: #059669;
+    --color-expression: #6366f1;
+    --color-aesthetic: #d946ef;
+    --color-simulation: #64748b;
+    --color-backstory: #f43f5e;
+    --color-goal: #eab308;
+}
+
 /* Profile Hero Section */
 .profile-hero {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border: 1px solid #333;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 24px;
@@ -41,11 +65,11 @@ st.markdown("""
     font-weight: 700;
     letter-spacing: -0.5px;
     margin-bottom: 4px;
-    color: white;
+    color: var(--text-primary);
 }
 .profile-tagline {
     font-size: 14px;
-    color: #888;
+    color: var(--text-secondary);
     margin-bottom: 8px;
 }
 .profile-meta {
@@ -53,7 +77,7 @@ st.markdown("""
     gap: 16px;
     flex-wrap: wrap;
     font-size: 13px;
-    color: #888;
+    color: var(--text-secondary);
 }
 .profile-meta-item {
     display: flex;
@@ -67,24 +91,24 @@ st.markdown("""
     gap: 12px;
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #333;
+    border-top: 1px solid var(--border-primary);
     flex-wrap: wrap;
 }
 .quick-stat {
-    background: #252540;
+    background: var(--bg-tertiary);
     border-radius: 8px;
     padding: 12px 16px;
-    min-width: 80px;
+    min-width: 100px;
     text-align: center;
 }
 .quick-stat-value {
     font-size: 18px;
     font-weight: 700;
-    color: white;
+    color: var(--text-primary);
 }
 .quick-stat-label {
     font-size: 11px;
-    color: #888;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -94,56 +118,59 @@ st.markdown("""
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: 16px;
 }
 .profile-tag {
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     padding: 4px 10px;
-    background: #252540;
-    border: 1px solid #333;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
     border-radius: 16px;
-    color: #888;
+    color: var(--text-secondary);
 }
 .profile-tag.highlight {
-    background: #667eea;
-    border-color: #667eea;
+    background: var(--accent);
+    border-color: var(--accent);
     color: white;
 }
 
 /* Profile Card */
 .profile-card {
-    background: #1a1a2e;
-    border: 1px solid #333;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
     border-radius: 10px;
     margin-bottom: 16px;
     overflow: hidden;
 }
 .profile-card-header {
     padding: 14px 18px;
-    border-bottom: 1px solid #333;
-    background: #252540;
+    border-bottom: 1px solid var(--border-primary);
+    background: var(--bg-tertiary);
     display: flex;
     align-items: center;
     gap: 10px;
+    font-size: 13px;
     font-weight: 600;
-    color: white;
+    color: var(--text-primary);
 }
 .profile-card-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
 }
-.profile-card-icon.personality { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.profile-card-icon.career { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-.profile-card-icon.expression { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-.profile-card-icon.aesthetic { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
-.profile-card-icon.simulation { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.profile-card-icon.backstory { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
-.profile-card-icon.goal { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.profile-card-icon.personality { background: rgba(59, 130, 246, 0.12); color: var(--color-personality); }
+.profile-card-icon.career { background: rgba(5, 150, 105, 0.12); color: var(--color-career); }
+.profile-card-icon.expression { background: rgba(99, 102, 241, 0.12); color: var(--color-expression); }
+.profile-card-icon.aesthetic { background: rgba(217, 70, 239, 0.12); color: var(--color-aesthetic); }
+.profile-card-icon.simulation { background: rgba(100, 116, 139, 0.12); color: var(--color-simulation); }
+.profile-card-icon.backstory { background: rgba(244, 63, 94, 0.12); color: var(--color-backstory); }
+.profile-card-icon.goal { background: rgba(234, 179, 8, 0.12); color: var(--color-goal); }
 .profile-card-body {
     padding: 16px 18px;
 }
@@ -151,22 +178,26 @@ st.markdown("""
 /* Value Pills */
 .value-pills {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
 }
 .value-pill {
-    font-size: 12px;
-    padding: 6px 12px;
-    background: #252540;
-    border-radius: 16px;
-    color: #ccc;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    color: var(--text-secondary);
 }
 .value-pill.highlight {
-    background: #667eea;
+    background: var(--accent);
+    border-color: var(--accent);
     color: white;
 }
 .value-pill.negative {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
     color: #ef4444;
 }
 
@@ -174,16 +205,21 @@ st.markdown("""
 .attr-item {
     margin-bottom: 12px;
 }
+.attr-item:last-child {
+    margin-bottom: 0;
+}
 .attr-label {
-    font-size: 11px;
-    color: #888;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
 }
 .attr-value {
-    font-size: 14px;
-    color: #ddd;
+    font-size: 13px;
+    color: var(--text-primary);
     line-height: 1.5;
 }
 </style>
@@ -345,19 +381,29 @@ def format_value(value) -> str:
     return str(value)
 
 
-def render_data_card(title: str, icon: str, color_class: str, data: dict) -> str:
-    """Render a card with dict data formatted as attributes."""
+def render_data_card(title: str, icon: str, color_class: str, data) -> str:
+    """Render a card with dict/list data formatted as attributes."""
     if not data:
         return ""
-    attrs = []
-    for key, value in data.items():
-        if value:
-            formatted = format_value(value)
-            if formatted:
-                attrs.append(render_attr(key, formatted))
-    if not attrs:
-        return ""
-    return render_card(title, icon, color_class, "".join(attrs))
+    # Handle list data
+    if isinstance(data, list):
+        content = format_value(data)
+        if not content:
+            return ""
+        return render_card(title, icon, color_class, content)
+    # Handle dict data
+    if isinstance(data, dict):
+        attrs = []
+        for key, value in data.items():
+            if value:
+                formatted = format_value(value)
+                if formatted:
+                    attrs.append(render_attr(key, formatted))
+        if not attrs:
+            return ""
+        return render_card(title, icon, color_class, "".join(attrs))
+    # Handle string/other
+    return render_card(title, icon, color_class, str(data))
 
 
 # ==================== HERO SECTION ====================
@@ -540,7 +586,7 @@ with tabs[2]:
             if cp.get("mbti"):
                 overview_content += f'<span class="value-pill highlight">{cp.get("mbti")}</span>'
             if cp.get("overview"):
-                overview_content += f'<div style="margin-top: 12px; color: #aaa; line-height: 1.6;">{cp.get("overview")}</div>'
+                overview_content += f'<div style="margin-top: 12px; color: var(--text-secondary); line-height: 1.6;">{cp.get("overview")}</div>'
             st.markdown(render_card("Overview", "🧠", "personality", overview_content), unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
@@ -641,8 +687,8 @@ with tabs[2]:
             niche = ", ".join(identity.get("industryNiche", [])[:3]) if identity.get("industryNiche") else ""
             career_preview = f"<strong>{title}</strong>" if title else ""
             if niche:
-                career_preview += f"<br><span style='color: #888;'>{niche}</span>"
-            career_preview += "<br><span style='color: #666; font-size: 12px;'>See Career Engine tab for details →</span>"
+                career_preview += f"<br><span style='color: var(--text-tertiary);'>{niche}</span>"
+            career_preview += "<br><span style='color: var(--text-tertiary); font-size: 12px;'>See Career Engine tab for details →</span>"
             st.markdown(render_card("Career Engine", "💼", "career", career_preview), unsafe_allow_html=True)
     else:
         st.info("No core personality data available")
@@ -664,7 +710,7 @@ with tabs[3]:
 
                 id_content = ""
                 if title:
-                    id_content += f"<div style='font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 8px;'>{title}</div>"
+                    id_content += f"<div style='font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;'>{title}</div>"
                 if status:
                     id_content += render_attr("Status", status)
                 if dream:
@@ -776,7 +822,7 @@ with tabs[5]:
                     aesthetic = essence.get("aesthetic", [])
                     content = ""
                     if vibe:
-                        content += f"<div style='font-size: 16px; color: #fff; margin-bottom: 12px;'>{vibe}</div>"
+                        content += f"<div style='font-size: 16px; color: var(--text-primary); margin-bottom: 12px;'>{vibe}</div>"
                     if aesthetic:
                         content += render_pills(aesthetic if isinstance(aesthetic, list) else [aesthetic], highlight_first=2)
                     for k, v in essence.items():
@@ -837,14 +883,14 @@ with tabs[6]:
             circ = sim.get("circadian")
             circ_content = ""
             if circ.get("chronotype"):
-                circ_content += f"<div style='font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 12px;'>{circ.get('chronotype')}</div>"
+                circ_content += f"<div style='font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;'>{circ.get('chronotype')}</div>"
             times = []
             if circ.get("wakeTime"):
                 times.append(f"🌅 Wake: {circ.get('wakeTime')}")
             if circ.get("sleepTime"):
                 times.append(f"🌙 Sleep: {circ.get('sleepTime')}")
             if times:
-                circ_content += f"<div style='color: #aaa; margin-bottom: 8px;'>{' | '.join(times)}</div>"
+                circ_content += f"<div style='color: var(--text-secondary); margin-bottom: 8px;'>{' | '.join(times)}</div>"
             if circ.get("peakHours"):
                 circ_content += f"<div style='margin-top: 8px;'>{render_pills(circ.get('peakHours'))}</div>"
             st.markdown(render_card("Circadian Rhythm", "⏰", "simulation", circ_content), unsafe_allow_html=True)
@@ -936,7 +982,7 @@ with tabs[7]:
 
         # Origin card - hero style
         if bs.get("origin"):
-            origin_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('origin')}</div>"
+            origin_content = f"<div style='color: var(--text-primary); line-height: 1.6;'>{bs.get('origin')}</div>"
             st.markdown(render_card("Origin", "🌍", "simulation", origin_content), unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
@@ -944,7 +990,7 @@ with tabs[7]:
         with col1:
             # Family
             if bs.get("family"):
-                family_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('family')}</div>"
+                family_content = f"<div style='color: var(--text-primary); line-height: 1.6;'>{bs.get('family')}</div>"
                 st.markdown(render_card("Family", "👨‍👩‍👧", "personality", family_content), unsafe_allow_html=True)
 
             # Education
@@ -956,7 +1002,7 @@ with tabs[7]:
                     edu_content = "<br>".join(f"🎓 {e}" for e in edu)
                     st.markdown(render_card("Education", "🎓", "career", edu_content), unsafe_allow_html=True)
                 else:
-                    st.markdown(render_card("Education", "🎓", "career", f"<div style='color: #ddd;'>{edu}</div>"), unsafe_allow_html=True)
+                    st.markdown(render_card("Education", "🎓", "career", f"<div style='color: var(--text-primary);'>{edu}</div>"), unsafe_allow_html=True)
 
             # Life Events
             if bs.get("lifeEvents"):
@@ -977,7 +1023,7 @@ with tabs[7]:
         with col2:
             # Pets
             if bs.get("pets"):
-                pets_content = f"<div style='color: #ddd; line-height: 1.6;'>{bs.get('pets')}</div>"
+                pets_content = f"<div style='color: var(--text-primary); line-height: 1.6;'>{bs.get('pets')}</div>"
                 st.markdown(render_card("Pets", "🐱", "expression", pets_content), unsafe_allow_html=True)
 
             # Formative Relationships
