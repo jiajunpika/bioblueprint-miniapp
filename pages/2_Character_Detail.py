@@ -7,6 +7,188 @@ from utils.client import get_client, is_connected, handle_api_error, init_client
 
 st.set_page_config(page_title="Character Detail", page_icon="📋", layout="wide")
 
+# Custom CSS for Profile View style
+st.markdown("""
+<style>
+/* Profile Hero Section */
+.profile-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.profile-hero-top {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+.profile-name {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    color: white;
+}
+.profile-tagline {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 8px;
+}
+.profile-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: #888;
+}
+.profile-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Quick Stats */
+.profile-quick-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
+    flex-wrap: wrap;
+}
+.quick-stat {
+    background: #252540;
+    border-radius: 8px;
+    padding: 12px 16px;
+    min-width: 80px;
+    text-align: center;
+}
+.quick-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+}
+.quick-stat-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Profile Tags */
+.profile-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.profile-tag {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: #252540;
+    border: 1px solid #333;
+    border-radius: 16px;
+    color: #888;
+}
+.profile-tag.highlight {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+/* Profile Card */
+.profile-card {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.profile-card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #333;
+    background: #252540;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: white;
+}
+.profile-card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.profile-card-icon.personality { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.profile-card-icon.career { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.profile-card-icon.expression { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.profile-card-icon.aesthetic { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.profile-card-icon.simulation { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.profile-card-icon.backstory { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+.profile-card-icon.goal { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.profile-card-body {
+    padding: 16px 18px;
+}
+
+/* Value Pills */
+.value-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.value-pill {
+    font-size: 12px;
+    padding: 6px 12px;
+    background: #252540;
+    border-radius: 16px;
+    color: #ccc;
+}
+.value-pill.highlight {
+    background: #667eea;
+    color: white;
+}
+.value-pill.negative {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Attribute List */
+.attr-item {
+    margin-bottom: 12px;
+}
+.attr-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.attr-value {
+    font-size: 14px;
+    color: #ddd;
+    line-height: 1.5;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📋 Character Detail")
 
 # Get UUID from URL query params (e.g., ?uuid=xxx)
@@ -103,6 +285,107 @@ def render_list_items(items: list, title: str):
                 st.markdown(f"- {item}")
 
 
+def render_pills(items: list, highlight_first: int = 0) -> str:
+    """Render items as pill badges."""
+    if not items:
+        return ""
+    pills = []
+    for i, item in enumerate(items):
+        cls = "value-pill highlight" if i < highlight_first else "value-pill"
+        pills.append(f'<span class="{cls}">{item}</span>')
+    return f'<div class="value-pills">{"".join(pills)}</div>'
+
+
+def render_card(title: str, icon: str, color_class: str, content: str) -> str:
+    """Render a profile card with header and body."""
+    return f'''
+    <div class="profile-card">
+        <div class="profile-card-header">
+            <div class="profile-card-icon {color_class}">{icon}</div>
+            {title}
+        </div>
+        <div class="profile-card-body">
+            {content}
+        </div>
+    </div>
+    '''
+
+
+def render_attr(label: str, value: str) -> str:
+    """Render an attribute item."""
+    return f'''
+    <div class="attr-item">
+        <div class="attr-label">{label}</div>
+        <div class="attr-value">{value}</div>
+    </div>
+    '''
+
+
+# ==================== HERO SECTION ====================
+profile = character.profile
+identity = profile.identity_card if profile else None
+blueprint = character.blueprint
+personality = blueprint.core_personality if blueprint else None
+
+# Build hero data
+name = profile.profile_name if profile else "Unknown"
+initial = name[0].upper() if name else "?"
+bio = identity.bio if identity else ""
+location = identity.location if identity else ""
+username = profile.username if profile else ""
+relationship = identity.relationship if identity else ""
+
+# Profile tags
+tags = identity.profile_tags if identity and identity.profile_tags else []
+
+# Quick stats
+quick_stats = []
+if identity:
+    if identity.age:
+        quick_stats.append(("Age", identity.age))
+    if identity.occupation:
+        quick_stats.append(("Role", identity.occupation))
+if personality and isinstance(personality, dict):
+    if personality.get("mbti"):
+        quick_stats.append(("MBTI", personality.get("mbti")))
+if identity and identity.zodiac:
+    quick_stats.append(("Sign", identity.zodiac))
+
+# Render Hero
+hero_meta = ""
+if location:
+    hero_meta += f'<span class="profile-meta-item">📍 {location}</span>'
+if username:
+    hero_meta += f'<span class="profile-meta-item">@{username}</span>'
+if relationship:
+    hero_meta += f'<span class="profile-meta-item">💍 {relationship}</span>'
+
+hero_tags = ""
+if tags:
+    highlight_tags = "".join([f'<span class="profile-tag highlight">{t}</span>' for t in tags[:3]])
+    normal_tags = "".join([f'<span class="profile-tag">{t}</span>' for t in tags[3:8]])
+    hero_tags = f'<div class="profile-tags">{highlight_tags}{normal_tags}</div>'
+
+hero_stats = ""
+if quick_stats:
+    stats_html = "".join([f'<div class="quick-stat"><div class="quick-stat-value">{v}</div><div class="quick-stat-label">{l}</div></div>' for l, v in quick_stats])
+    hero_stats = f'<div class="profile-quick-stats">{stats_html}</div>'
+
+st.markdown(f'''
+<div class="profile-hero">
+    <div class="profile-hero-top">
+        <div class="profile-avatar">{initial}</div>
+        <div style="flex: 1;">
+            <div class="profile-name">{name}</div>
+            <div class="profile-tagline">{bio}</div>
+            <div class="profile-meta">{hero_meta}</div>
+            {hero_tags}
+        </div>
+    </div>
+    {hero_stats}
+</div>
+''', unsafe_allow_html=True)
+
 # Main tabs for different sections
 tabs = st.tabs([
     "👤 Profile",
@@ -115,7 +398,6 @@ tabs = st.tabs([
     "📖 Backstory",
     "🎯 Goals",
     "📷 Album",
-    "📤 JSON Export"
 ])
 
 # Tab 1: Profile
@@ -518,59 +800,3 @@ with tabs[9]:
 
         except Exception as e:
             st.error(handle_api_error(e))
-
-# Tab 11: JSON Export
-with tabs[10]:
-    st.markdown("#### 📤 Export as JSON")
-
-    all_export_options = [
-        "Full Character",
-        "Profile Only",
-        "Identity Card Only",
-        "Core Personality",
-        "Expression Engine",
-        "Aesthetic Engine",
-        "Simulation",
-        "Backstory",
-        "Goals",
-    ]
-    export_options = st.multiselect(
-        "Select data to export",
-        all_export_options,
-        default=all_export_options,
-    )
-
-    if st.button("Generate JSON", type="primary"):
-        export_data = {}
-
-        if "Full Character" in export_options:
-            export_data = character.model_dump(mode="json")
-        else:
-            if "Profile Only" in export_options:
-                export_data["profile"] = character.profile.model_dump(mode="json")
-            if "Identity Card Only" in export_options:
-                export_data["identityCard"] = character.profile.identity_card.model_dump(mode="json")
-            if character.blueprint:
-                if "Core Personality" in export_options and character.blueprint.core_personality:
-                    export_data["corePersonality"] = character.blueprint.core_personality
-                if "Expression Engine" in export_options and character.blueprint.expression_engine:
-                    export_data["expressionEngine"] = character.blueprint.expression_engine
-                if "Aesthetic Engine" in export_options and character.blueprint.aesthetic_engine:
-                    export_data["aestheticEngine"] = character.blueprint.aesthetic_engine
-                if "Simulation" in export_options and character.blueprint.simulation:
-                    export_data["simulation"] = character.blueprint.simulation
-                if "Backstory" in export_options and character.blueprint.backstory:
-                    export_data["backstory"] = character.blueprint.backstory
-                if "Goals" in export_options and character.blueprint.goal:
-                    export_data["goal"] = character.blueprint.goal
-
-        json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
-
-        st.code(json_str, language="json")
-
-        st.download_button(
-            label="Download JSON",
-            data=json_str,
-            file_name=f"character_{character_id[:8]}.json",
-            mime="application/json",
-        )
